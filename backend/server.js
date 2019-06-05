@@ -5,12 +5,14 @@ const bodyParser = require('body-parser');
 const logger = require('morgan');
 const Data = require('./data');
 
-const API_PORT = 3001;
+console.log('porttt : ', process.env.MONGODB_URI);
+const API_PORT = process.env.MONGODB_URI | 3001;
 const app = express();
 app.use(cors());
 const router = express.Router();
 
 // this is our MongoDB database
+// const dbRoute = 'mongodb://heroku_8v7f3rdq:tol516i04dct019nbn7nnb0uk0@ds133137.mlab.com:33137/heroku_8v7f3rdq';
 const dbRoute = 'mongodb+srv://talGlobalRon:talro1992!@cluster0-dklnq.mongodb.net/test?retryWrites=true&w=majority';
 // connects our back end code with the database
 mongoose.connect(dbRoute, { useNewUrlParser: true });
