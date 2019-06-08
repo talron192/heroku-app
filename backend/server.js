@@ -5,8 +5,8 @@ const bodyParser = require('body-parser');
 const logger = require('morgan');
 const Data = require('./data');
 
-console.log('porttt : ', process.env.MONGODB_URI);
-const API_PORT = process.env.MONGODB_URI | 3001;
+console.log('porttt********************* : ', process.env.PORT);
+const API_PORT = process.env.PORT | 3001;
 const app = express();
 app.use(cors());
 const router = express.Router();
