@@ -1,89 +1,158 @@
-const mongoose = require('mongoose');
 const express = require('express');
-var cors = require('cors');
-const bodyParser = require('body-parser');
-const logger = require('morgan');
-const Data = require('./data');
-
-console.log('porttt********************* : ', process.env.PORT);
-const API_PORT = process.env.PORT | 3001;
 const app = express();
-app.use(cors());
-const router = express.Router();
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const PORT = 4000;
+const Routes = express.Router();
+const fs = require('fs');
 
-//yarin commit
+// var url = 'mongodb://talRon:talro1992@ds131737.mlab.com:31737/heroku_cfp0fh8k‏';
+var url = 'mongodb+srv://talGlobalRon:talro1992!@cluster0-dklnq.mongodb.net/test?retryWrites=true&w=majority';
+// var url = 'mongodb+srv://talRon:talro1992@cluster0-qpd3p.mongodb.net/customers';
+// var url = 'mongodb://127.0.0.1:27017/customers';
 
-// this is our MongoDB database
-// const dbRoute = 'mongodb://heroku_8v7f3rdq:tol516i04dct019nbn7nnb0uk0@ds133137.mlab.com:33137/heroku_8v7f3rdq';
-const dbRoute = 'mongodb+srv://talGlobalRon:talro1992!@cluster0-dklnq.mongodb.net/test?retryWrites=true&w=majority';
-// connects our back end code with the database
-mongoose.connect(dbRoute, { useNewUrlParser: true });
+console.log('port============',process.env.PORT);
+const port = process.env.PORT || PORT;
 
-let db = mongoose.connection;
 
-db.once('open', () => console.log('connected to the database'));
+let Customer = require('./customer.model');
+let LoginDetails = require('./loginDetails.model');
 
-// checks if connection with the database is successful
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+var pathToCustomerId;
 
-// (optional) only made for logging and
-// bodyParser, parses the request body to be a readable json format
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
-app.use(logger('dev'));
+const multer = require('multer');
+const ejs = require('ejs');
+const path = require('path');
 
-// this is our get method
-// this method fetches all available data in our database
-router.get('/getData', (req, res) => {
-  Data.find((err, data) => {
-    if (err) return res.json({ success: false, error: err });
-    return res.json({ success: true, data: data });
-  });
+//****Upload files*****/
+
+//Storage a files
+
+const Storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        let path = `${pathToCustomerId}`;
+        if (fs.existsSync(path)) {
+            console.log('path exist');
+            cb(null, path);
+        } else {
+            console.log('path not exist');
+            fs.mkdirSync(path);
+            cb(null, path);
+        }
+    },
+    filename: function (req, file, cb) {
+        console.log('file', file);
+        cb(null, file.originalname + '-' + Date.now() + path.extname(file.originalname));
+    }
 });
+//Init upload
+const upload = multer({
+    storage: Storage,
+}).single('file');
 
-// this is our update method
-// this method overwrites existing data in our database
-router.post('/updateData', (req, res) => {
-  const { id, update } = req.body;
-  Data.findByIdAndUpdate(id, update, (err) => {
-    if (err) return res.json({ success: false, error: err });
-    return res.json({ success: true });
-  });
-});
-
-// this is our delete method
-// this method removes existing data in our database
-router.delete('/deleteData', (req, res) => {
-  const { id } = req.body;
-  Data.findByIdAndRemove(id, (err) => {
-    if (err) return res.send(err);
-    return res.json({ success: true });
-  });
-});
-
-// this is our create methid
-// this method adds new data in our database
-router.post('/putData', (req, res) => {
-  let data = new Data();
-
-  const { id, message } = req.body;
-
-  if ((!id && id !== 0) || !message) {
-    return res.json({
-      success: false,
-      error: 'INVALID INPUTS',
+Routes.route('/upload/').post(function (req, res) {
+    upload(req, res, (err) => {
+        if (err) {
+            console.log('error in upload file', err);
+        } else {
+            res.send('!!המסמך הועלה בהצלחה');
+        }
     });
-  }
-  data.message = message;
-  data.id = id;
-  data.save((err) => {
-    if (err) return res.json({ success: false, error: err });
-    return res.json({ success: true });
-  });
 });
 
-// append /api for our http requests
-app.use('/api', router);
+//EJS
+//app.set('view engine', 'ejs');
 
-// launch our backend into a port
-app.listen(API_PORT, () => console.log(`LISTENING ON PORT ${API_PORT}`));
+//public folder
+//app.use(express.static('public'));
+
+//app.get('/',(req,res)=>res.render('index'));
+
+//****Upload files*****/
+
+app.use(cors());
+app.use(bodyParser.json());
+
+mongoose.connect(url, { useNewUrlParser: true });
+const connection = mongoose.connection;
+
+connection.once('open', function () {
+    console.log('MongoDb connection succssesfully');
+});
+
+Routes.route('/get-id/').post(function (req, res) {
+    let path = 'public/uploads/' + req.body.cid;
+    pathToCustomerId = path;
+    console.log('pathToCustomerId', pathToCustomerId);
+});
+
+Routes.route('/getId/:id').get(function (req, res) {
+    let id = req.params.id;
+    // let files= fs.readFileSync('public/uploads/756756867754');
+
+    Customer.findById(id, function (err, customer) {
+        if (err) {
+            console.log("error:", err);
+        } else {
+            res.json(customer);
+
+        }
+    });
+});
+
+Routes.route('/get').get(function (req, res) {
+    Customer.find(function (err, customers) {
+        if (err) {
+            console.log(err);
+        } else {
+            res.json(customers);
+
+        }
+    });
+});
+
+Routes.route('/loginDetails').get(function (req, res) {
+    LoginDetails.find(function (err, loginDetails) {
+        if (err) {
+            console.log(err);
+        } else {
+            res.json(loginDetails);
+
+        }
+    })
+
+});
+
+
+
+Routes.route('/add').post(function (req, res) {
+    console.log('route-add');
+    console.log(req.body);
+    let customer = new Customer(req.body);
+    fs.mkdirSync(`public/uploads/${customer._id}`);
+
+    let address = req.body.address;
+    customer.address = address;
+    console.log('added customer', customer);
+
+    customer.save()
+        .then(customer => {
+            res.status(200).json({ 'customer': 'customer added successfuly', customer });
+        });
+});
+
+Routes.route( '/files-list').post(function (req,res){
+    let files= fs.readFileSync('756756867754');
+
+    console.log('files',files);
+})
+
+/*upload files */
+
+app.use('/customers', Routes);
+
+
+app.listen(port, function () {
+    console.log("Server is listening to:" + port);
+})
